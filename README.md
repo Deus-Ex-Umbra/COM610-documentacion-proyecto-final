@@ -1,6 +1,6 @@
-### Despliegue de Sistema Clínico Escalable en AWS con Arquitectura Hexagonal y Contenerización
+<h1 align="center"> Despliegue de Sistema Clínico Escalable en AWS con Arquitectura Hexagonal y Contenerización </h1>
 
-📋 Información del Proyecto
+# 📋 Información del Proyecto
 
 Asignatura: Trabajando en la Nube (COM610)
 
@@ -12,51 +12,23 @@ Estudiante: Aparicio Llanquipacha Gabriel
 
 Semestre: 2-2025
 
-🚀 Descripción del Software
+# 🚀 Descripción del Software
 
 Este proyecto consiste en el despliegue en la nube de una plataforma web para la gestión de una clínica dental. El sistema permite la administración de pacientes, citas y expedientes médicos mediante una interfaz moderna y segura.
 
 A nivel de infraestructura, se ha diseñado una arquitectura Cloud-Native en Amazon Web Services (AWS) que prioriza la Alta Disponibilidad (HA), la Seguridad y la Escalabilidad Automática.
 
-🛠 Tech Stack
+## 🛠 Tech Stack
 
-Componente
+| Componente        | Tecnología            | Servicio AWS                 |
+|------------------|-----------------------|------------------------------|
+| **Frontend**     | React.js (Vite)       | S3 + CloudFront              |
+| **Backend**      | NestJS (Node.js)      | EC2 + Auto Scaling Group     |
+| **Contenerización** | Docker             | ECR / Docker Hub             |
+| **Base de Datos** | PostgreSQL           | Amazon RDS                   |
+| **Proxy / CDN**  | N/A                   | CloudFront + ALB             |
 
-Tecnología
-
-Servicio AWS
-
-Frontend
-
-React.js (Vite)
-
-S3 + CloudFront
-
-Backend
-
-NestJS (Node.js)
-
-EC2 + Auto Scaling Group
-
-Contenerización
-
-Docker
-
-ECR / Docker Hub
-
-Base de Datos
-
-PostgreSQL
-
-Amazon RDS
-
-Proxy/CDN
-
-N/A
-
-CloudFront + ALB
-
-☁️ Arquitectura del Despliegue
+# ☁️ Arquitectura del Despliegue
 
 La arquitectura implementada sigue el patrón de Proxy Inverso con CDN, unificando tanto el frontend como el backend bajo un único dominio seguro (HTTPS) para evitar problemas de CORS y "Mixed Content".
 
@@ -64,73 +36,48 @@ La arquitectura implementada sigue el patrón de Proxy Inverso con CDN, unifican
 <img src="./imagenes/arquitectura.svg" alt="Diagrama de Arquitectura AWS" width="800"/>
 </div>
 
-Flujo de Datos
+## 🔄 Flujo de Datos
 
-Cliente: El usuario accede vía HTTPS a través de CloudFront.
+- **Cliente:** El usuario accede vía HTTPS a través de CloudFront.
+- **CDN (CloudFront):**
+  - Si la petición es contenido estático (JS, CSS), lo sirve desde el Bucket S3.
+  - Si la ruta comienza con `/api`, redirige el tráfico al Application Load Balancer (ALB).
+- **Balanceo:** El ALB distribuye la carga entre las instancias saludables.
+- **Cómputo (Auto Scaling):** Las instancias EC2 (Ubuntu) ejecutan el backend encapsulado en contenedores Docker.
+- **Persistencia:** Los contenedores se conectan de forma privada a Amazon RDS.
 
-CDN (CloudFront):
+---
 
-Si la petición es contenido estático (JS, CSS), lo sirve desde el Bucket S3.
+## 🛡️ 1. Estrategia de Seguridad (Security Groups)
 
-Si la ruta comienza con /api, redirige el tráfico al Application Load Balancer (ALB).
+Se aplicó estrictamente el principio de **Mínimo Privilegio**.  
+Los recursos no son accesibles directamente desde internet, salvo el punto de entrada.
 
-Balanceo: El ALB distribuye la carga entre las instancias saludables.
+| Grupo de Seguridad | Puerto | Origen Permitido | Descripción |
+|--------------------|--------|------------------|-------------|
+| **sg-alb-public**  | 80 / 443 | 0.0.0.0/0      | Permite tráfico web público hacia el Balanceador. |
+| **sg-backend-ec2** | 3000   | sg-alb-public    | El backend solo acepta peticiones del ALB. |
+| **sg-db-rds**      | 5432   | sg-backend-ec2   | La base de datos solo acepta conexiones desde los servidores backend. |
 
-Cómputo (Auto Scaling): Las instancias EC2 (Ubuntu) ejecutan el backend encapsulado en contenedores Docker.
+---
 
-Persistencia: Los contenedores se conectan de forma privada a Amazon RDS.
+## ⚙️ 2. Configuración de Automatización (Infrastructure as Code)
 
-🛡️ 1. Estrategia de Seguridad (Security Groups)
+Para garantizar la elasticidad, no se configuran servidores manualmente.  
+Se utiliza una **Launch Template** que aprovisiona automáticamente las instancias del Auto Scaling Group.
 
-Se aplicó estrictamente el principio de Mínimo Privilegio. Los recursos no son accesibles directamente desde internet, salvo el punto de entrada.
+**Launch Template:**
+- **AMI:** Ubuntu Server 24.04 LTS  
+- **Instance Type:** t2.micro / t3.micro  
+- **IAM Role:** `Rol-EC2-Acceso-S3` (Permite descargar el `.env` de producción).
 
-Grupo de Seguridad
+---
 
-Puerto
+### 📜 Script de User Data (Bootstrapping)
 
-Origen Permitido
+Este script se ejecuta automáticamente al nacer cada instancia.  
+Se encarga de **instalar Docker**, **descargar el código** y **levantar el contenedor**.
 
-Descripción
-
-sg-alb-public
-
-80/443
-
-0.0.0.0/0
-
-Permite tráfico web público hacia el Balanceador.
-
-sg-backend-ec2
-
-3000
-
-sg-alb-public
-
-El backend solo acepta peticiones del Balanceador.
-
-sg-db-rds
-
-5432
-
-sg-backend-ec2
-
-La BD solo acepta conexiones de los servidores backend.
-
-⚙️ 2. Configuración de Automatización (Infrastructure as Code)
-
-Para garantizar la elasticidad, no se configuran servidores manualmente. Se utiliza una Launch Template que aprovisiona las instancias automáticamente.
-
-Launch Template
-
-AMI: Ubuntu Server 24.04 LTS
-
-Instance Type: t2.micro / t3.micro
-
-IAM Role: Rol-EC2-Acceso-S3 (Permite descargar el .env de producción).
-
-📜 Script de User Data (Bootstrapping)
-
-Este script se ejecuta automáticamente al nacer cada instancia. Se encarga de instalar Docker, descargar el código y levantar el contenedor.
 
 ```bash
 exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
@@ -159,12 +106,11 @@ docker run -d \
 echo "--- DESPLIEGUE COMPLETADO ---"
 ```
 
-
 <div align="center">
 <img src="./imagenes/plantilla_lanzamiento.png" alt="Configuración User Data" width="700"/>
 </div>
 
-📈 3. Escalabilidad y Auto Scaling Group (ASG)
+# 📈 3. Escalabilidad y Auto Scaling Group (ASG)
 
 El sistema es capaz de reaccionar ante picos de demanda.
 
@@ -193,44 +139,46 @@ stress --cpu 2 --timeout 600
 
 Resultado: El ASG detectó la carga y lanzó nuevas instancias automáticamente sin intervención humana.
 
-🌐 4. CloudFront como Proxy Inverso (Solución CORS/SSL)
+## 🌐 4. CloudFront como Proxy Inverso (Solución CORS / SSL)
 
-Uno de los mayores desafíos fue la integración segura entre el Frontend (HTTPS) y el Backend. Se resolvió configurando CloudFront como el punto de entrada único.
+Uno de los mayores desafíos fue la integración segura entre el Frontend (HTTPS) y el Backend.  
+La solución fue configurar **CloudFront como punto de entrada único**, actuando como *reverse proxy*.
 
-Configuración de Behaviors
+### 🔧 Configuración de Behaviors
 
-Ruta Default (*): Sirve el Frontend (React) desde el Bucket S3.
+- **Ruta Default (`*`)**: Sirve el Frontend (React) desde el Bucket S3.  
+- **Ruta API (`/api/*`)**: Redirige el tráfico al Application Load Balancer.
 
-Ruta API (/api/*): Redirige el tráfico al Application Load Balancer.
+Esto permite que el navegador interprete **todo el tráfico como local y seguro**, eliminando problemas de CORS y asegurando compatibilidad SSL end-to-end.
 
-Esta configuración permite que el navegador interprete todo el tráfico como "Local" y seguro.
+### 🏗️ Configuración en Origins
 
-Configuración en Origins:
-
-Origin S3: Acceso restringido vía OAC (Origin Access Control).
-
-Origin ALB: Conexión vía HTTP (Puerto 80) interna de AWS.
+- **Origin S3:** Acceso restringido mediante **OAC (Origin Access Control)**.  
+- **Origin ALB:** Conexión interna vía **HTTP (Puerto 80)** dentro de AWS (no expuesto a internet).
 
 <div align="center">
 <img src="./imagenes/cloudfront_configuracion.png" alt="Configuración CloudFront Behaviors" width="700"/>
 </div>
 
-💻 5. Despliegue del Frontend
+---
 
-El frontend se construyó localmente y se subió como sitio estático.
+## 💻 5. Despliegue del Frontend
 
-Archivo .env de React:
-Gracias al proxy, la URL de la API es el mismo dominio del CDN.
+El frontend se construyó localmente y se desplegó como sitio estático en S3.
+
+### 📦 Archivo `.env` de React
+
+Gracias a la configuración del proxy, la API utiliza el **mismo dominio del CDN**:
 
 VITE_API_URL=[https://d3ftme9hh1yrd9.cloudfront.net](https://d3ftme9hh1yrd9.cloudfront.net)
 
+---
 
-✅ Conclusiones
+## ✅ Conclusiones
 
-Este despliegue demuestra cómo una arquitectura moderna en AWS puede resolver problemas complejos de infraestructura tradicional:
+Este despliegue demuestra cómo una arquitectura moderna en AWS resuelve problemas tradicionales de infraestructura:
 
-Costo-Efectividad: Solo se paga por las instancias activas gracias al Auto Scaling.
+- **Costo-Efectividad:** Solo se pagan las instancias activas gracias al Auto Scaling.  
+- **Seguridad:** El backend y la base de datos están completamente aislados de internet.  
+- **Experiencia de Usuario:** CloudFront distribuye el contenido desde su CDN global, reduciendo la latencia y acelerando la carga.
 
-Seguridad: La base de datos y el backend están aislados de internet.
-
-Experiencia de Usuario: La carga es rápida gracias al CDN global de CloudFront.

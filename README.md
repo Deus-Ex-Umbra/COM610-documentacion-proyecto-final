@@ -110,27 +110,25 @@ echo "--- DESPLIEGUE COMPLETADO ---"
 <img src="./imagenes/plantilla_lanzamiento.png" alt="Configuración User Data" width="700"/>
 </div>
 
-# 📈 3. Escalabilidad y Auto Scaling Group (ASG)
+## 📈 3. Escalabilidad y Auto Scaling Group (ASG)
 
-El sistema es capaz de reaccionar ante picos de demanda.
+El sistema está preparado para reaccionar automáticamente ante picos de demanda, garantizando alta disponibilidad.
 
-Configuración ASG:
+### ⚙️ Configuración del ASG
 
-Mínimo: 2 instancia.
+- **Mínimo:** 2 instancias  
+- **Máximo:** 4 instancias  
+- **Política de Escalado (Target Tracking):**
+  - Se configuró un monitoreo de **CPU Promedio** mediante CloudWatch.
+  - Si el CPU supera el **40%**, el sistema añade automáticamente nuevas instancias.
 
-Máximo: 4 instancias.
+---
 
-Política de Escalado (Target Tracking):
+### 🧪 Prueba de Estrés (Resiliencia)
 
-Se configuró una alerta de CloudWatch para monitorear el CPU Promedio.
+Para validar la elasticidad del entorno, se ejecutó una prueba de carga utilizando la herramienta `stress`.
 
-Si el CPU supera el 40%, el sistema añade automáticamente nuevas instancias.
-
-Prueba de Estrés (Resiliencia)
-
-Para validar la elasticidad, se sometió al sistema a una prueba de carga utilizando la herramienta stress.
-
-Comando de ataque:
+**Comando utilizado:**
 
 # Genera carga artificial en 2 núcleos durante 10 minutos
 ```bash
